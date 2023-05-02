@@ -9,7 +9,7 @@ import random
 
 # def var_str():
 
-def net_addr(services: int, ip: str, port: int):
+def net_addr(services: int, ip: str, port: int, version: bool):
     time = int(time.time())
     services = services
 
@@ -26,11 +26,18 @@ def net_addr(services: int, ip: str, port: int):
 # def inv_vect():
 
 # create different message payloads 
-def create_version():
+def create_version(version: int, services: int, port: int, ip: str, ):
+    timestamp = int(time.time())
+    addr_from = "0.0.0.0"
+    nonce = random.randint(0, 99999)
+    user_agent = 0 #b'\x00' 
+    start_height = 0
+
+    addr_from = net_addr(services, addr_from, port, version)
+    addr_recv = net_addr(services, ip, port, version)
 
     # Create the payload message
-    payload = struct.pack("<iQqQsQ", version, services, timestamp, nonce, start_height) #???
-
+    payload = struct.pack("<iQq", version, services, timestamp) + addr_recv + addr_from + struct.pack('<Qii', nonce, user_agent, start_height)
 
     # Define the magic value and command name
     magic = b"\xf9\xbe\xb4\xd9"
