@@ -60,33 +60,25 @@ def create_version(version: int, services: int, port: int, ip: str, ):
 
 # def parse_inv():
 
+def main():
+    # state ?
+    version = 70015  
+    services = 0
+    ip = "201.191.6.103"
+    port = 8333
 
-# Send version message
-version = 70015  # Replace with your own version number
-services = 0  # Replace with the services you want to offer
-timestamp = int(time.time())  # Replace with the current Unix timestamp
-addr_recv = "201.191.6.103"  # Replace with the address of the receiving node
-addr_from = "0.0.0.0" # Replace with your own address
+    # Establish connection
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((ip, port))
 
-nonce = random.randint(0, 99999)
-user_agent = b'\x00' 
-start_height = 0  # Replace with the block height of the latest block you have
+    # Create & send the complete message to the node
+    version_message = create_version(version, services, port, ip)
+    sock.sendall(version_message)
 
+    # Receive and process any response from the node
+    response = sock.recv(1024)
+    print(response)
 
+    # while True:
 
-# def main():
-#     # Establish connection
-#     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     sock.connect(('201.191.6.103', 8333))
-
-#     # Create & send the complete message to the node
-#     version_message = create_version()
-#     sock.sendall(version_message)
-
-#     # Receive and process any response from the node
-#     response = sock.recv(1024)
-#     print(response)
-
-#     while True:
-
-# main()
+main()
