@@ -15,25 +15,19 @@ def var_int(value):
     else:
         return b'\xff' + value.to_bytes(8, 'little')
 
-# test var_int 
-my_list = [1, 2, 3, 4, 5]
-length = len(my_list)
-varint = var_int(length)
-print(varint)
-
 # def var_str():
 
 def net_addr(services: int, ip: str, port: int, version: bool):
-    time = int(time.time())
+    timestamp = int(time.time())
     services = services
 
     hex_ip = socket.inet_aton(ip).hex().encode()
     ip_address = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF' + hex_ip
 
     if version:
-        net_adr = struct.pack('<Q', services) + ip_address + struct.pack('<Q', port)
+        net_addr = struct.pack('<Q', services) + ip_address + struct.pack('<Q', port)
     else:
-        net_adr = struct.pack('<IQ', time, services) + ip_address + struct.pack('<Q', port)
+        net_addr = struct.pack('<IQ', timestamp, services) + ip_address + struct.pack('<Q', port)
     
     return net_addr
 
@@ -65,7 +59,18 @@ def create_version(version: int, services: int, port: int, ip: str, ):
 
     return message
 
-# def create_verack():
+def create_verack():
+    magic = b"\xf9\xbe\xb4\xd9"
+    command = b"verack\x00\x00\x00\x00\x00\x00"
+    length = b"\x00\x00\x00\x00"
+
+    # Calculate the checksum
+    checksum = hashlib.sha256(hashlib.sha256(command).digest()).digest()[:4]
+
+    # Create verack message
+    message = magic + command + length + checksum
+
+    return message
 
 # def create_getdata():
 
@@ -95,4 +100,4 @@ def main():
 
     # while True:
 
-main()
+# main()
