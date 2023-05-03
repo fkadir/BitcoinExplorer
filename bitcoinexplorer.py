@@ -6,6 +6,18 @@ import struct
 import hashlib
 import binascii
 
+# var_int format 
+# ! almost works except byte by byte comparison is used test case 5
+def var_int(value):
+    if value < b'\xfd':
+        return struct.unpack('<B', value)[0]
+    elif value <= b'\xff\xff':
+        return struct.unpack('<H', value[1:])[0]
+    elif value <= b'\xff\xff\xff\xff':
+        return struct.unpack('<I', value[1:])[0]
+    else:
+        return struct.unpack('<Q', value[1:])[0]
+
 # Binary encode the sub-version
 def create_sub_version():
     sub_version = "/Satoshi:0.7.2/"
@@ -122,7 +134,7 @@ def main():
     # print_response("verack", verack_message, response_data)
 
     while True: 
-        data = sock.recv(65536)
+        data = sock.recv(24)
         if len(data) > 24:
             command = unpack_header(data)
             if (command=='inv'):
@@ -135,6 +147,5 @@ def main():
 
     # # Close the TCP connection
     # sock.close()
-
 
 main()
