@@ -149,11 +149,3 @@ def main():
     # sock.close()
 
 main()
-
-# # print(var_int(b'\x00'))
-# assert var_int(b'\x00') == 0
-# assert var_int(b'\x0a') == 10
-# assert var_int(b'\xfd\xfd\x00') == 253
-# assert var_int(b'\xfd\xff\xff') == 65535
-# # assert var_int(b'\xfe\xff\xff\xff\xff') == 4294967295
-# assert var_int(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff') == 18446744073709551615
