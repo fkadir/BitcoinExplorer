@@ -56,16 +56,12 @@ def print_response(command, request_data, response_data):
     print(binascii.hexlify(response_data))
 
 def parse_inv_payload(payload):
-    print(payload)
     
-    # Ensure payload has at least 4 bytes
-    if len(payload) < 4:
-        print("Payload too short")
-        exit()
-
     num_items = struct.unpack("<I", payload[:4])[0]
+
     items = []
     for i in range(num_items):
+        print(payload[4+i*36:8+i*36])
         item_type = struct.unpack("<I", payload[4+i*36:8+i*36])[0]
         item_hash = payload[8+i*36:44+i*36]
         items.append((item_type, item_hash))
@@ -90,33 +86,33 @@ def main():
     getdata_message = create_message(magic_value, 'getdata', getdata_payload)
 
         # Establish TCP Connection
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((node_ip_address, port))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((node_ip_address, port))
 
     # Send message "version"
-    s.send(version_message)
-    response_data = s.recv(buffer_size)
+    sock.send(version_message)
+    response_data = sock.recv(buffer_size)
     print_response("version", version_message, response_data)
 
     # Send message "verack"
-    s.send(verack_message)
-    response_data = s.recv(buffer_size)
+    sock.send(verack_message)
+    response_data = sock.recv(buffer_size)
     print_response("verack", verack_message, response_data)
 
-    data = s.recv(1024)
-    parse_inv_payload(data)
-
     # while True:
-    #     data = s.recv(1024)
-    #     print(data)
+    #     data = sock.recv(1024)
+    #     payload = binascii.hexlify(data)
+    #     # Make sure its a valid payload message
+    #     if payload[:8] == b'f9beb4d9':
+    #         parse_inv_payload(binascii.hexlify(data))
 
-    # # Send message "getdata"
-    # s.send(getdata_message)
-    # response_data = s.recv(buffer_size)
-    # print_response("getdata", getdata_message, response_data)
+    # Send message "getdata"
+    sock.send(getdata_message)
+    response_data = sock.recv(buffer_size)
+    print_response("getdata", getdata_message, response_data)
 
     # Close the TCP connection
-    # s.close()
+    sock.close()
 
 
 main()
