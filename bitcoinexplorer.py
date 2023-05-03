@@ -55,21 +55,6 @@ def print_response(command, request_data, response_data):
     print("Response:")
     print(binascii.hexlify(response_data))
 
-def parse_inv_payload(payload):
-    num_items = struct.unpack("<I", payload[:4])[0]
-    print(num_items)
-
-    items = []
-    for i in range(num_items):
-        print(payload[4+i*36:8+i*36])
-        item_type = struct.unpack("<I", payload[4+i*36:8+i*36])[0]
-        item_hash = payload[8+i*36:44+i*36]
-        items.append((item_type, item_hash))
-
-    # Print the inventory vectors
-    for item in items:
-        print(f"Item type: {item[0]}, Item hash: {item[1].hex()}")
-
 def unpack_header(response):
     # Define the header format
     header_fmt = "<4s12sI4s"
@@ -86,7 +71,27 @@ def unpack_header(response):
     print(f"Payload size: {payload_size}")
     print(f"Checksum: {checksum.hex()}")
     print("\n")
-    return command  
+    return command
+
+def parse_inv_payload(payload):
+    num_items = struct.unpack("<I", payload[:4])[0]
+    print(num_items)
+
+    items = []
+    for i in range(num_items):
+        print(f"Unpacked Type: {payload[4+i*36:8+i*36]} \n hash {payload[8+i*36:44+i*36].hex()}")
+        item_type = struct.unpack("<I", payload[4+i*36:8+i*36])[0]
+        item_hash = payload[8+i*36:44+i*36]
+        print(f"Type: {item_type} \n Hash: {item_hash.hex()} \n")
+
+        if item_type == 2:
+            items.append((item_type, item_hash))    
+
+    # Print the inventory vectors
+    for item in items:
+        print(f"Item type: {item[0]}, Item hash: {item[1].hex()}")
+
+  
 
 def main():
     # Constants
@@ -121,7 +126,6 @@ def main():
         if len(data) > 24:
             command = unpack_header(data)
             if (command=='inv'):
-                print(data)
                 parse_inv_payload(data[24:]) 
     
     # # Send message "getdata"
