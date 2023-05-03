@@ -1,103 +1,122 @@
+# Import dependencies
 import socket
 import time
 import struct 
 import hashlib
 import random
+import binascii
 
-# encoding formats 
-def var_int(value):
-    if value < 0xfd:
-        return bytes([value])
-    elif value <= 0xffff:
-        return b'\xfd' + value.to_bytes(2, 'little')
-    elif value <= 0xffffffff:
-        return b'\xfe' + value.to_bytes(4, 'little')
-    else:
-        return b'\xff' + value.to_bytes(8, 'little')
+# Binary encode the sub-version
+def create_sub_version():
+    sub_version = "/Satoshi:0.7.2/"
+    return b'\x0F' + sub_version.encode()
 
-# def var_str():
+# Binary encode the network addresses
+def create_network_address(ip_address, port):
+    network_address = struct.pack('>8s16sH', b'\x01', 
+        bytearray.fromhex("00000000000000000000ffff") + socket.inet_aton(ip_address), port)
+    return(network_address)
 
-def net_addr(services: int, ip: str, port: int, version: bool):
+# Create the TCP request object
+def create_message(magic, command, payload):
+    checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[0:4]
+    return(struct.pack('L12sL4s', magic, command.encode(), len(payload), checksum) + payload)
+
+# Create the "version" request payload
+def create_payload_version(node_ip_address):
+    version = 60002
+    services = 1
     timestamp = int(time.time())
-    services = services
-
-    hex_ip = socket.inet_aton(ip).hex().encode()
-    ip_address = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF' + hex_ip
-
-    if version:
-        net_addr = struct.pack('<Q', services) + ip_address + struct.pack('<Q', port)
-    else:
-        net_addr = struct.pack('<IQ', timestamp, services) + ip_address + struct.pack('<Q', port)
-    
-    return net_addr
-
-# def inv_vect():
-
-# create different message payloads 
-def create_version(version: int, services: int, port: int, ip: str, ):
-    timestamp = int(time.time())
-    addr_from = "0.0.0.0"
-    nonce = random.randint(0, 99999)
-    user_agent = 0 #b'\x00' 
+    addr_local = create_network_address("0.0.0.0", 8333)
+    addr_peer = create_network_address(node_ip_address, 8333)
+    nonce = random.getrandbits(64)
     start_height = 0
+    payload = struct.pack('<LQQ26s26sQ16sL', version, services, timestamp, addr_peer,
+                          addr_local, nonce, create_sub_version(), start_height)
+    return(payload)
 
-    addr_from = net_addr(services, addr_from, port, version)
-    addr_recv = net_addr(services, ip, port, version)
+# Create the "verack" request message
+def create_message_verack():
+    return bytearray.fromhex("f9beb4d976657261636b000000000000000000005df6e0e2")
 
-    # Create the payload message
-    payload = struct.pack("<iQq", version, services, timestamp) + addr_recv + addr_from + struct.pack('<Qii', nonce, user_agent, start_height)
+def create_payload_getdata(tx_id):
+    count = 1
+    type = 1
+    hash = bytearray.fromhex(tx_id)
+    payload = struct.pack('<bb32s', count, type, hash)
+    return(payload)
 
-    # Define the magic value and command name
-    magic = b"\xf9\xbe\xb4\xd9"
-    command = b"version\x00\x00\x00\x00\x00\x00\x00\x00"
+# Print request/response data
+def print_response(command, request_data, response_data):
+    print("")
+    print("Command: " + command)
+    print("Request:")
+    print(binascii.hexlify(request_data))
+    print("Response:")
+    print(binascii.hexlify(response_data))
 
-    # Calculate the payload checksum
-    payload_checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
+def parse_inv_payload(payload):
+    print(payload)
+    
+    # Ensure payload has at least 4 bytes
+    if len(payload) < 4:
+        print("Payload too short")
+        exit()
 
-    # Create the complete version message
-    message = magic + command + struct.pack("<I", len(payload)) + payload + payload_checksum
+    num_items = struct.unpack("<I", payload[:4])[0]
+    items = []
+    for i in range(num_items):
+        item_type = struct.unpack("<I", payload[4+i*36:8+i*36])[0]
+        item_hash = payload[8+i*36:44+i*36]
+        items.append((item_type, item_hash))
 
-    return message
-
-def create_verack():
-    magic = b"\xf9\xbe\xb4\xd9"
-    command = b"verack\x00\x00\x00\x00\x00\x00"
-    length = b"\x00\x00\x00\x00"
-
-    # Calculate the checksum
-    checksum = hashlib.sha256(hashlib.sha256(command).digest()).digest()[:4]
-
-    # Create verack message
-    message = magic + command + length + checksum
-
-    return message
-
-# def create_getdata():
-
-# parse incoming payloads
-# def parse_block():
-
-# def parse_inv():
+    # Print the inventory vectors
+    for item in items:
+        print(f"Item type: {item[0]}, Item hash: {item[1].hex()}")
 
 def main():
-    # state ?
-    version = 70015  
-    services = 0
-    ip = "201.191.6.103"
+    # Constants
+    magic_value = 0xd9b4bef9
+    tx_id = "fc57704eff327aecfadb2cf3774edc919ba69aba624b836461ce2be9c00a0c20"
+    node_ip_address = '167.71.73.244'
     port = 8333
+    buffer_size = 1024
+    
+    # Create Request Objects
+    version_payload = create_payload_version(node_ip_address)
+    version_message = create_message(magic_value, 'version', version_payload)
+    verack_message = create_message_verack()
+    getdata_payload = create_payload_getdata(tx_id)
+    getdata_message = create_message(magic_value, 'getdata', getdata_payload)
 
-    # Establish connection
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
+        # Establish TCP Connection
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((node_ip_address, port))
 
-    # Create & send the complete message to the node
-    version_message = create_version(version, services, port, ip)
-    sock.sendall(version_message)
+    # Send message "version"
+    s.send(version_message)
+    response_data = s.recv(buffer_size)
+    print_response("version", version_message, response_data)
 
-    # Receive and process any response from the node
-    response = sock.recv(1024)
-    print(response)
+    # Send message "verack"
+    s.send(verack_message)
+    response_data = s.recv(buffer_size)
+    print_response("verack", verack_message, response_data)
+
+    data = s.recv(1024)
+    parse_inv_payload(data)
 
     # while True:
+    #     data = s.recv(1024)
+    #     print(data)
 
-# main()
+    # # Send message "getdata"
+    # s.send(getdata_message)
+    # response_data = s.recv(buffer_size)
+    # print_response("getdata", getdata_message, response_data)
+
+    # Close the TCP connection
+    # s.close()
+
+
+main()
