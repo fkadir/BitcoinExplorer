@@ -90,21 +90,22 @@ def parse_inv_payload(payload):
     # print(payload)
     length, num_items = var_int(payload)
 
-    items = []
+    block_items = []
     for i in range(num_items):
-        # TD: see if this works!!!
         item_type = struct.unpack("<I", payload[length+i*36:(length+4)+i*36])[0]
         item_hash = payload[8+i*36:44+i*36]
-        print(f"Type: {item_type} \n Hash: {item_hash.hex()} \n")
 
         if item_type == 2:
-            items.append((item_type, item_hash))    
+            print("WE GOT A BLOCK PEOPLE")
+            block_items.append((item_type, item_hash))    
+        elif item_type == 1:
+            print("we got a transaction!")
 
     # Print the inventory vectors
-    for item in items:
+    for item in block_items:
         print(f"Item type: {item[0]}, Item hash: {item[1].hex()}")
 
-  
+    return block_items
 
 def main():
     # Constants
