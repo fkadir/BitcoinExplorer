@@ -9,14 +9,15 @@ import binascii
 # var_int format 
 # ! almost works except byte by byte comparison is used test case 5
 def var_int(value):
-    if value < b'\xfd':
-        return struct.unpack('<B', value)[0]
-    elif value <= b'\xff\xff':
-        return struct.unpack('<H', value[1:])[0]
-    elif value <= b'\xff\xff\xff\xff':
-        return struct.unpack('<I', value[1:])[0]
+    val = value[:4]
+    if val < b'\xfd':
+        return 1, struct.unpack('<B', value[0:1])[0]
+    elif val <= b'\xff\xff':
+        return 3, struct.unpack('<H', value[1:3])[0]
+    elif val <= b'\xff\xff\xff\xff':
+        return 5, struct.unpack('<I', value[1:5])[0]
     else:
-        return struct.unpack('<Q', value[1:])[0]
+        return 9, struct.unpack('<Q', value[1:9])[0]
 
 # Binary encode the sub-version
 def create_sub_version():
@@ -83,16 +84,16 @@ def unpack_header(response):
     print(f"Payload size: {payload_size}")
     print(f"Checksum: {checksum.hex()}")
     print("\n")
-    return command
+    return command, payload_size, magic, checksum
 
 def parse_inv_payload(payload):
-    num_items = struct.unpack("<I", payload[:4])[0]
-    print(num_items)
+    # print(payload)
+    length, num_items = var_int(payload)
 
     items = []
     for i in range(num_items):
-        print(f"Unpacked Type: {payload[4+i*36:8+i*36]} \n hash {payload[8+i*36:44+i*36].hex()}")
-        item_type = struct.unpack("<I", payload[4+i*36:8+i*36])[0]
+        # TD: see if this works!!!
+        item_type = struct.unpack("<I", payload[length+i*36:(length+4)+i*36])[0]
         item_hash = payload[8+i*36:44+i*36]
         print(f"Type: {item_type} \n Hash: {item_hash.hex()} \n")
 
@@ -108,8 +109,7 @@ def parse_inv_payload(payload):
 def main():
     # Constants
     magic_value = 0xd9b4bef9
-    tx_id = "fc57704eff327aecfadb2cf3774edc919ba69aba624b836461ce2be9c00a0c20"
-    node_ip_address = '167.71.73.244'
+    node_ip_address = '52.78.49.245'
     port = 8333
     buffer_size = 1024
     
@@ -135,11 +135,17 @@ def main():
 
     while True: 
         data = sock.recv(24)
-        if len(data) > 24:
-            command = unpack_header(data)
-            if (command=='inv'):
-                parse_inv_payload(data[24:]) 
+        command, payload_size, magic, checksum = unpack_header(data)
+        payload = sock.recv(payload_size)
+        if (command=='inv'):
+            print('we got an event!\n')
+            parse_inv_payload(payload) 
     
+
+    # # Create getdata Payload
+    #tx_id = "fc57704eff327aecfadb2cf3774edc919ba69aba624b836461ce2be9c00a0c20"
+    # getdata_payload = create_payload_getdata(tx_id)
+    # getdata_message = create_message(magic_value, 'getdata', getdata_payload)
     # # Send message "getdata"
     # sock.send(getdata_message)
     # response_data = sock.recv(buffer_size)
