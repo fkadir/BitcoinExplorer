@@ -19,6 +19,9 @@ def transform_var_int(value):
     else:
         return 9, struct.unpack('<Q', value[1:9])[0]
 
+def parse_var_int(value):
+    print(value)
+
 # Binary encode the sub-version
 def create_sub_version():
     sub_version = "/Satoshi:0.7.2/"
@@ -73,7 +76,6 @@ def unpack_header(response):
     header_fmt = "<4s12sI4s"
 
     # Unpack the header fields from the message
-    # print(f"Struct buffer: {response}")
     magic, com, payload_size, checksum = struct.unpack(header_fmt, response[:24])
 
     # Format command 
@@ -101,10 +103,17 @@ def parse_inv_payload(payload):
             print("WE GOT A BLOCK PEOPLE")
             print(f"Item type: {item_type}, Item hash: {item_hash.hex()}")
             block_items.append(item_hash)    
-        elif item_type == 1:
-            print("we got a transaction!")
+        # elif item_type == 1:
+        #     print("we got a transaction!")
 
     return block_items
+
+def parse_block_payload(payload):
+    block_ftm = '<i32s32sIII'
+    version, prev_block, merkle, timestamp, bits, nonce = struct.unpack(block_ftm, payload[:80])
+    parse_var_int()
+    return timestamp, nonce # difficulty, transactions
+
 
 def main():
     # Constants
@@ -135,35 +144,25 @@ def main():
 
     while True: 
         data = sock.recv(24)
-        if len(data) == 24:
-            command, payload_size, magic, checksum = unpack_header(data)
+        # if len(data) == 24:
+        command, payload_size, magic, checksum = unpack_header(data)
         payload = sock.recv(payload_size)
         if (command=='inv'):
+            # Get block transactions
             ids = parse_inv_payload(payload)
-            # print(ids)
+            print(ids)
 
-            getdata_payload = create_payload_getdata(len(ids), ids)
-            getdata_message = create_message(magic_value, 'getdata', getdata_payload)
-            # Send message "getdata"
-            sock.send(getdata_message)
-            # TD: determine buffer size for block response average 1-2 megabytes !!!
-            response_data = sock.recv(buffer_size)
-            print_response("getdata", getdata_message, response_data)
-            break
+            if (len(ids) > 0):
+                #  Create getdata message
+                getdata_payload = create_payload_getdata(len(ids), ids)
+                getdata_message = create_message(magic_value, 'getdata', getdata_payload)
 
-
-    
-
-    # # Create getdata Payload
-    #tx_id = "fc57704eff327aecfadb2cf3774edc919ba69aba624b836461ce2be9c00a0c20"
-    # getdata_payload = create_payload_getdata(tx_id)
-    # getdata_message = create_message(magic_value, 'getdata', getdata_payload)
-    # # Send message "getdata"
-    # sock.send(getdata_message)
-    # response_data = sock.recv(buffer_size)
-    # print_response("getdata", getdata_message, response_data)
-
-    # # Close the TCP connection
-    # sock.close()
+                # Send message "getdata"
+                sock.send(getdata_message)
+                response_data = sock.recv(2000000) #???
+                unpack_header(response_data)
+                parse_block_payload(response_data[24:])
+                print_response("getdata", getdata_message, response_data)
+                break
 
 main()
