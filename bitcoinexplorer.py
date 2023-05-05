@@ -19,9 +19,6 @@ def transform_var_int(value):
     else:
         return 9, struct.unpack('<Q', value[1:9])[0]
 
-def parse_var_int(value):
-    print(value)
-
 # Binary encode the sub-version
 def create_sub_version():
     sub_version = "/Satoshi:0.7.2/"
@@ -103,16 +100,15 @@ def parse_inv_payload(payload):
             print("WE GOT A BLOCK PEOPLE")
             print(f"Item type: {item_type}, Item hash: {item_hash.hex()}")
             block_items.append(item_hash)    
-        # elif item_type == 1:
-        #     print("we got a transaction!")
 
     return block_items
 
+# Print timestamp, list of transactions (incl value), nonce, difficulty level, verify hash
 def parse_block_payload(payload):
     block_ftm = '<i32s32sIII'
     version, prev_block, merkle, timestamp, bits, nonce = struct.unpack(block_ftm, payload[:80])
-    parse_var_int()
-    return timestamp, nonce # difficulty, transactions
+    b, n_transactions = transform_var_int(payload[80:])
+    return timestamp, nonce # difficulty, n_transactions, transactions
 
 
 def main():
@@ -144,25 +140,25 @@ def main():
 
     while True: 
         data = sock.recv(24)
-        # if len(data) == 24:
-        command, payload_size, magic, checksum = unpack_header(data)
-        payload = sock.recv(payload_size)
-        if (command=='inv'):
-            # Get block transactions
-            ids = parse_inv_payload(payload)
-            print(ids)
+        if len(data) == 24:
+            command, payload_size, magic, checksum = unpack_header(data)
+            payload = sock.recv(payload_size)
+            if (command=='inv'):
+                # Get block transactions
+                ids = parse_inv_payload(payload)
+                print(ids)
 
-            if (len(ids) > 0):
-                #  Create getdata message
-                getdata_payload = create_payload_getdata(len(ids), ids)
-                getdata_message = create_message(magic_value, 'getdata', getdata_payload)
+                if (len(ids) > 0):
+                    #  Create getdata message
+                    getdata_payload = create_payload_getdata(len(ids), ids)
+                    getdata_message = create_message(magic_value, 'getdata', getdata_payload)
 
-                # Send message "getdata"
-                sock.send(getdata_message)
-                response_data = sock.recv(2000000) #???
-                unpack_header(response_data)
-                parse_block_payload(response_data[24:])
-                print_response("getdata", getdata_message, response_data)
-                break
+                    # Send message "getdata"
+                    sock.send(getdata_message)
+                    response_data = sock.recv(2000000) #???
+                    unpack_header(response_data)
+                    parse_block_payload(response_data[24:])
+                    print_response("getdata", getdata_message, response_data)
+                    break
 
 main()
