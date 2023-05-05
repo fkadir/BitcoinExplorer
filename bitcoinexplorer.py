@@ -8,7 +8,7 @@ import binascii
 
 # var_int format 
 # ! almost works except byte by byte comparison is used test case 5
-def var_int(value):
+def transform_var_int(value):
     val = value[:4]
     if val < b'\xfd':
         return 1, struct.unpack('<B', value[0:1])[0]
@@ -52,11 +52,11 @@ def create_payload_version(node_ip_address):
 def create_message_verack():
     return bytearray.fromhex("f9beb4d976657261636b000000000000000000005df6e0e2")
 
-def create_payload_getdata(tx_id):
-    count = 1
-    type = 1
-    hash = bytearray.fromhex(tx_id)
-    payload = struct.pack('<bb32s', count, type, hash)
+def create_payload_getdata(count, ids):
+    type = 2
+    payload = struct.pack('<b', count)
+    for i in range(0, count-1):
+        payload += struct.pack('<b32s', type, ids[i])
     return(payload)
 
 # Print request/response data
@@ -73,12 +73,14 @@ def unpack_header(response):
     header_fmt = "<4s12sI4s"
 
     # Unpack the header fields from the message
+    # print(f"Struct buffer: {response}")
     magic, com, payload_size, checksum = struct.unpack(header_fmt, response[:24])
 
     # Format command 
     command = com.decode('ascii').strip('\0')
 
     # Print the header fields
+    print("\n")
     print(f"Magic: {magic.hex()}")
     print(f"Command: {command}")
     print(f"Payload size: {payload_size}")
@@ -88,7 +90,7 @@ def unpack_header(response):
 
 def parse_inv_payload(payload):
     # print(payload)
-    length, num_items = var_int(payload)
+    length, num_items = transform_var_int(payload)
 
     block_items = []
     for i in range(num_items):
@@ -97,13 +99,10 @@ def parse_inv_payload(payload):
 
         if item_type == 2:
             print("WE GOT A BLOCK PEOPLE")
-            block_items.append((item_type, item_hash))    
+            print(f"Item type: {item_type}, Item hash: {item_hash.hex()}")
+            block_items.append(item_hash)    
         elif item_type == 1:
             print("we got a transaction!")
-
-    # Print the inventory vectors
-    for item in block_items:
-        print(f"Item type: {item[0]}, Item hash: {item[1].hex()}")
 
     return block_items
 
@@ -136,11 +135,23 @@ def main():
 
     while True: 
         data = sock.recv(24)
-        command, payload_size, magic, checksum = unpack_header(data)
+        if len(data) == 24:
+            command, payload_size, magic, checksum = unpack_header(data)
         payload = sock.recv(payload_size)
         if (command=='inv'):
-            print('we got an event!\n')
-            parse_inv_payload(payload) 
+            ids = parse_inv_payload(payload)
+            # print(ids)
+
+            getdata_payload = create_payload_getdata(len(ids), ids)
+            getdata_message = create_message(magic_value, 'getdata', getdata_payload)
+            # Send message "getdata"
+            sock.send(getdata_message)
+            # TD: determine buffer size for block response average 1-2 megabytes !!!
+            response_data = sock.recv(buffer_size)
+            print_response("getdata", getdata_message, response_data)
+            break
+
+
     
 
     # # Create getdata Payload
