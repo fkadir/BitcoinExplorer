@@ -5,6 +5,7 @@ import random
 import struct
 import hashlib
 import binascii
+import datetime
 
 # var_int format 
 # ! almost works except byte by byte comparison is used test case 5
@@ -57,6 +58,7 @@ def create_payload_getdata(count, ids):
     payload = struct.pack('<b', count)
     for i in range(0, count-1):
         payload += struct.pack('<b32s', type, ids[i])
+    print(payload)
     return(payload)
 
 # Print request/response data
@@ -106,7 +108,11 @@ def parse_inv_payload(payload):
 # Print timestamp, list of transactions (incl value), nonce, difficulty level, verify hash
 def parse_block_payload(payload):
     block_ftm = '<i32s32sIII'
-    version, prev_block, merkle, timestamp, bits, nonce = struct.unpack(block_ftm, payload[:80])
+    version, prev_block, merkle, unix_timestamp, bits, nonce = struct.unpack(block_ftm, payload[:80])
+    # human readable timestamp 
+    dt_object = datetime.fromtimestamp(unix_timestamp).strftime('%a %d %b %Y, %I:%M%p')
+    timestamp = dt_object.strftime("%Y-%m-%d %H:%M:%S")
+
     b, n_transactions = transform_var_int(payload[80:])
     return timestamp, nonce # difficulty, n_transactions, transactions
 
@@ -146,7 +152,6 @@ def main():
             if (command=='inv'):
                 # Get block transactions
                 ids = parse_inv_payload(payload)
-                print(ids)
 
                 if (len(ids) > 0):
                     #  Create getdata message
@@ -156,9 +161,12 @@ def main():
                     # Send message "getdata"
                     sock.send(getdata_message)
                     response_data = sock.recv(2000000) #???
-                    unpack_header(response_data)
-                    parse_block_payload(response_data[24:])
-                    print_response("getdata", getdata_message, response_data)
+                    print_response('getdata', getdata_message, response_data)
+
+                    command, payload_size, magic, checksum = unpack_header(response_data)
+                    timestamp, nonce = parse_block_payload(response_data[24:])
+                    # print_response("getdata", getdata_message, response_data)
+                    print(f"Timestamp: {timestamp}, Nonce: {nonce} \n THE END")
                     break
 
 main()
