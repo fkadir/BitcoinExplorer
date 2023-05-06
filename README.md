@@ -2,6 +2,7 @@
 
 **Project**
 
+
 The aim of this project was to develop a working Bitcoin blockchain viewer application. This
 is similar to existing viewers such as the Blockchain Explorer, although the scope
 and complexity is much smaller. The application displays blocks as they are
@@ -19,6 +20,7 @@ readable form
 
 **Instructions**
 
+
 You can run this bitcoin explorer by cloning the repo and:
 
 • running the file through any IDE or 
@@ -29,10 +31,11 @@ You can run this bitcoin explorer by cloning the repo and:
 The program has no additional dependencies such as interpreters/compilers/runtimes!
 
 
-  warning: sometimes the connect to the bitcoin node can't be established right away. The comman line shows an time out error in this case. Run the program again     and it shoul work. 
+warning: sometimes the connect to the bitcoin node can't be established right away. The comman line shows an time out error in this case. Run the program again     and it shoul work. 
 
 
-Internal architecture overview 
+**Internal architecture overview**
+
 
   functions:
   
