@@ -20,6 +20,17 @@ def transform_var_int(value):
     else:
         return 9, struct.unpack('<Q', value[1:9])[0]
 
+def create_var_int(value):
+    val = value.to_bytes(2, 'little')
+    if val < b'\xfd':
+        return struct.pack('<B', value)
+    elif val <= b'\xff\xff':
+        return struct.pack('<H', value)
+    elif val <= b'\xff\xff\xff\xff':
+        return struct.pack('<I', value)
+    else:
+        struct.pack('<Q', value)
+    
 # Binary encode the sub-version
 def create_sub_version():
     sub_version = "/Satoshi:0.7.2/"
@@ -55,10 +66,14 @@ def create_message_verack():
 
 def create_payload_getdata(count, ids):
     type = 2
-    payload = struct.pack('<b', count)
-    for i in range(0, count-1):
-        payload += struct.pack('<b32s', type, ids[i])
-    print(payload)
+    payload = create_var_int(count)
+    print(ids)
+    if len(ids) > 1:
+        for i in range(0, count-1):
+            payload += struct.pack('<I32s', type, ids[i])
+    else:
+        payload += struct.pack('<I32s', type, ids[0])
+        
     return(payload)
 
 # Print request/response data
@@ -110,11 +125,12 @@ def parse_block_payload(payload):
     block_ftm = '<i32s32sIII'
     version, prev_block, merkle, unix_timestamp, bits, nonce = struct.unpack(block_ftm, payload[:80])
     # human readable timestamp 
-    dt_object = datetime.fromtimestamp(unix_timestamp).strftime('%a %d %b %Y, %I:%M%p')
-    timestamp = dt_object.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.datetime.fromtimestamp(unix_timestamp).strftime('%a %d %b %Y, %I:%M%p')
 
     b, n_transactions = transform_var_int(payload[80:])
     return timestamp, nonce # difficulty, n_transactions, transactions
+
+
 
 
 def main():
@@ -137,12 +153,10 @@ def main():
     # Send message "version"
     sock.send(version_message)
     response_data = sock.recv(buffer_size)
-    # print_response("version", version_message, response_data)
 
     # Send message "verack"
     sock.send(verack_message)
     response_data = sock.recv(buffer_size)
-    # print_response("verack", verack_message, response_data)
 
     while True: 
         data = sock.recv(24)
