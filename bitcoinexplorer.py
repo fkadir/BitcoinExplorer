@@ -74,16 +74,6 @@ def create_payload_getdata(count, block_hash):
         
     return(payload)
 
-# Print request/response data
-# delete ???
-# def print_response(command, request_data, response_data):
-    print("")
-    print("Command: " + command)
-    print("Request:")
-    print(binascii.hexlify(request_data))
-    print("Response:")
-    print(binascii.hexlify(response_data))
-
 def unpack_header(response):
     # Define the header format
     header_fmt = "<4s12sI4s"
@@ -92,7 +82,6 @@ def unpack_header(response):
     magic, com, payload_size, checksum = struct.unpack(header_fmt, response)
 
     # Make sure command starts with ascii character
-    print(com, com[0:1])
     if com[0:1].isascii():
         command = com.decode('ascii').strip('\0')
     else: 
