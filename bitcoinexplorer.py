@@ -80,12 +80,7 @@ def unpack_header(response):
 
     # Unpack the header fields from the message
     magic, com, payload_size, checksum = struct.unpack(header_fmt, response)
-
-    # Make sure command starts with ascii character
-    if com[0:1].isascii():
-        command = com.decode('ascii').strip('\0')
-    else: 
-        command = 'Command Unknown'
+    command = com.decode('ascii').strip('\0')
 
     # Print the header fields
     print("\n")
