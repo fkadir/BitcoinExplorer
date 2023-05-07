@@ -7,7 +7,7 @@ The aim of this project was to develop a working Bitcoin blockchain viewer appli
 • The date and time that the block was added to the blockchain, formatted in a human
 readable form
 
-• Number of transactions in the block ?
+• Number of transactions in the block
 
 • The nonce that was used to successfully hash the block, and the difficulty level
 
@@ -80,4 +80,5 @@ retrieve the information from the block message
 display the information on the command line.
 
 • main
+
 Connection to a bitcoin node (ip_address hard coded)is established. Message headers and mined bitcoin blocks are displayed continuously.
