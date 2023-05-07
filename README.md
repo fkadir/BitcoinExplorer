@@ -2,7 +2,7 @@
 
 **Project**
 
-The aim of this project was to develop a working Bitcoin blockchain viewer application. This is similar to existing viewers such as the Blockchain Explorer, although the scope and complexity is much smaller. The application displays blocks as they are mined by the Bitcoin system. For each block, it displays:
+The aim of this project was to develop a working Bitcoin blockchain viewer application. This is similar to existing viewers such as the Blockchain Explorer, although the scope and complexity is much smaller. The application displays blocks as they are mined by the Bitcoin system one at a time. For each block, it displays:
 
 • The date and time that the block was added to the blockchain, formatted in a human
 readable form
@@ -14,6 +14,9 @@ readable form
 • Verify that that hash does indeed match the hash included in the block!
 
 Additionally, it displays the message header of all other messages send over the network.
+
+After the program displays a block, you can run the program again to display the next block.
+(Unfortunately, the program does not run continuously at this point)
 
 **Instructions**
 

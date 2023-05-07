@@ -76,7 +76,7 @@ def create_payload_getdata(count, block_hash):
 
 # Print request/response data
 # delete ???
-def print_response(command, request_data, response_data):
+# def print_response(command, request_data, response_data):
     print("")
     print("Command: " + command)
     print("Request:")
@@ -89,14 +89,15 @@ def unpack_header(response):
     header_fmt = "<4s12sI4s"
 
     # Unpack the header fields from the message
-    magic, com, payload_size, checksum = struct.unpack(header_fmt, response[:24])
+    magic, com, payload_size, checksum = struct.unpack(header_fmt, response)
 
-    # Format command 
-    print(com)
-    if com[0] == b'\x00':
-        command = 'Command Unknown'
-    else: 
+    # Make sure command starts with ascii character
+    print(com, com[0:1])
+    if com[0:1].isascii():
+
         command = com.decode('ascii').strip('\0')
+    else: 
+        command = 'Command Unknown'
 
     # Print the header fields
     print("\n")
@@ -116,36 +117,37 @@ def parse_inv_payload(payload):
         item_hash = payload[(length+4)+i*36:(length+36)+i*36]
 
         if item_type == 2:
-            print(f"Item type: {item_type}, Item hash: {item_hash.hex()}")
             block_items.append(item_hash)    
 
     return block_items
 
-# retrieve timestamp, list of transactions (incl value), nonce, difficulty level, hash from received block message
+# retrieve data from block payload
 def parse_block_payload(payload):
     block_ftm = '<i32s32sIII'
-    print(payload[:80]) # delete ????
     version, prev_block, merkle, unix_timestamp, difficulty, nonce = struct.unpack(block_ftm, payload[:80])
 
     # human readable timestamp 
     timestamp = datetime.datetime.fromtimestamp(unix_timestamp).strftime('%a %d %b %Y, %I:%M%p')
 
-    b, n_transactions = transform_var_int(payload[80:])
-    return timestamp, nonce, difficulty, merkle #, n_transactions, transactions (incl value), hash == merkle?
+    # number of transactions
+    length, n_tx = transform_var_int(payload[80:])
 
-def display_block(timestamp, nonce, difficulty, send_hash, rec_hash): #n_transactions, transactions
+    # retrieve transactions ..
 
-    print(f'Timestamp: {timestamp}\n')
-    #list of transactions and their value 
-    print('uhhhhh transactions right')
-    print(f'Nonce: {nonce}, Difficulty level: {difficulty}')
+    return timestamp, nonce, difficulty, n_tx 
+
+def display_block(timestamp, nonce, difficulty, send_hash, rec_hash, n_tx): 
+    print(f'Timestamp: {timestamp} \n')
+    print(f'Number of transactions: {n_tx} \n')
+    print(f'Transactions:\n Unable to parse at this point\n')
+    print(f'Nonce: {nonce}, Difficulty level: {difficulty}\n')
     #verify hash 
-    print(f'Send Hash: {send_hash}')
-    print(f'Received Hash: {rec_hash}')
-    if hash_block[0] == rec_hash:
-        print('Verified Hash!')
+    print(f'Send Hash: {binascii.hexlify(send_hash)}\n')
+    print(f'Received Hash: {binascii.hexlify(rec_hash)}\n')
+    if send_hash == rec_hash:
+        print('Verified Hash!\n')
     else:
-        print('Unverified Hash')
+        print('Unverified Hash\n')
 
 
 if __name__ == '__main__':
@@ -182,19 +184,25 @@ if __name__ == '__main__':
                 # Get block transactions
                 hash_block = parse_inv_payload(payload)
 
-                if (len(hash_block) > 0):
+                if (len(hash_block) == 1):
                     #  Create getdata message
                     getdata_payload = create_payload_getdata(len(hash_block), hash_block)
                     getdata_message = create_message(magic_value, 'getdata', getdata_payload)
 
                     # Send message "getdata"
                     sock.send(getdata_message)
-                    response_data = sock.recv(2000000) #???
-                    print_response(response_data)  # delete ???
+                    response_data_header = sock.recv(24) 
 
-                    command, payload_size, magic, checksum = unpack_header(response_data)
-                    timestamp, nonce, difficulty, rec_hash = parse_block_payload(response_data[24:])
+                    # Receive and parse response "block" header 
+                    command, payload_size, magic, checksum = unpack_header(response_data_header)
+
+                    # Receive and parse "block" payload 
+                    response_payload = sock.recv(payload_size)
+                    timestamp, nonce, difficulty, n_tx = parse_block_payload(response_payload)
+
+                    # Create hash of block to verify it
+                    rec_hash = hashlib.sha256(hashlib.sha256(response_payload).digest()).digest()
 
                     # display block 
-                    display_block(timestamp, nonce, difficulty, hash_block[0], rec_hash)
+                    display_block(timestamp, nonce, difficulty, hash_block[0], rec_hash, n_tx)
                     break
