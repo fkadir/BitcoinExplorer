@@ -94,7 +94,6 @@ def unpack_header(response):
     # Make sure command starts with ascii character
     print(com, com[0:1])
     if com[0:1].isascii():
-
         command = com.decode('ascii').strip('\0')
     else: 
         command = 'Command Unknown'
